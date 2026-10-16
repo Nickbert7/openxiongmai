@@ -1,0 +1,71 @@
+name: XM530 test tool
+
+on:
+  push:
+    branches:
+      - testtool
+  workflow_dispatch:
+
+env:
+  TOOLCHAIN_URL_XM530: https://github.com/OpenIPC/firmware/releases/download/toolchain/toolchain.xiongmai-xm530.tgz
+  CROSS_COMPILE: arm-openipc-linux-musleabi-
+
+jobs:
+  build:
+    name: Build XM530 I2C test tool
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download XM530 toolchain
+        run: |
+          curl -sSLf \
+            -o "$RUNNER_TEMP/toolchain.tgz" \
+            "$TOOLCHAIN_URL_XM530"
+
+          echo "Toolchain SHA256:"
+          sha256sum "$RUNNER_TEMP/toolchain.tgz"
+
+          mkdir -p "$RUNNER_TEMP/toolchain"
+
+          tar xzf "$RUNNER_TEMP/toolchain.tgz" \
+            -C "$RUNNER_TEMP/toolchain"
+
+          echo "$RUNNER_TEMP/toolchain/arm-openipc-linux-musleabi_sdk-buildroot/bin" \
+            >> "$GITHUB_PATH"
+
+      - name: Check compiler
+        run: |
+          ${CROSS_COMPILE}gcc --version
+
+      - name: Build xm_i2c_test
+        run: |
+          ${CROSS_COMPILE}gcc \
+            -Os \
+            -static \
+            -Wall \
+            -Wextra \
+            -o xm_i2c_test \
+            tools/xm_i2c_test.c
+
+      - name: Verify binary
+        run: |
+          echo "Binary:"
+          file xm_i2c_test
+
+          echo
+          echo "Architecture:"
+          ${CROSS_COMPILE}readelf -h xm_i2c_test \
+            | grep -E 'Class:|Data:|Machine:'
+
+          echo
+          ls -lh xm_i2c_test
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: xm530-i2c-test
+          path: xm_i2c_test
+          if-no-files-found: error
