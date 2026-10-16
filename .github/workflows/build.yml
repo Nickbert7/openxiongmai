@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - main
+      - testtool
   workflow_dispatch:
 
 # External inputs are pinned so upstream changes cannot silently alter results.
