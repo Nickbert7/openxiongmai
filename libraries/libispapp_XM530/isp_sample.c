@@ -2462,13 +2462,11 @@ static XM_S32 ispSampleMain() {
   ISP_PUB_ATTR_S stPubAttr;
   // 5M
   if (gstProductInfo.u8RsltType == P5M_) {
-    if (gstProductInfo.u32SensorType == SENSOR_CHIP_SC5332) {
-      stPubAttr.u8FrameRate = 15;
-    } else {
+
       stPubAttr.u8FrameRate =
           (gstProductInfo.u8StdType == PALS) ? 25 : 30;
-    }
   }
+  
   // 4M
   else if (gstProductInfo.u8RsltType == P4M_) {
 #if (defined DEVTYPE_AHD)
@@ -2540,9 +2538,16 @@ static XM_S32 ispSampleMain() {
       stAttr.stDestSize.u32Width = 2560;
       stAttr.stDestSize.u32Height = 1440;
       break;
+
     case P5M_:
       stAttr.stDestSize.u32Width = 2600;
-      stAttr.stDestSize.u32Height = 1954;
+
+      if (gstProductInfo.u32SensorType == SENSOR_CHIP_SC5332) {
+        stAttr.stDestSize.u32Height = 1952;
+      } else {
+        stAttr.stDestSize.u32Height = 1954;
+      }
+
       break;
     default:
       stAttr.stDestSize.u32Width = 1280;
