@@ -2456,7 +2456,40 @@ static XM_VOID *ISP_Run_SocNone(XM_VOID) {
 }
 
 #endif
+/*
+ * Optional SC5332 Bayer test override.
+ *
+ * /tmp/sc5332_bayer:
+ *   missing -> use original BAYER_RGGB
+ *   0..3    -> use numeric Bayer test value
+ *
+ * Any invalid content falls back to BAYER_RGGB.
+ */
+static XM_S32 sc5332_get_bayer_test(XM_S32 *pBayer)
+{
+  FILE *fp;
+  int value;
 
+  if (pBayer == NULL)
+    return XM_FAILURE;
+
+  fp = fopen("/tmp/sc5332_bayer", "r");
+  if (fp == NULL)
+    return XM_FAILURE;
+
+  if (fscanf(fp, "%d", &value) != 1) {
+    fclose(fp);
+    return XM_FAILURE;
+  }
+
+  fclose(fp);
+
+  if (value < 0 || value > 3)
+    return XM_FAILURE;
+
+  *pBayer = (XM_S32)value;
+  return XM_SUCCESS;
+}
 static XM_S32 ispSampleMain() {
   XM_S32 s32Ret;
   ISP_PUB_ATTR_S stPubAttr;
@@ -2494,7 +2527,29 @@ static XM_S32 ispSampleMain() {
   DEBUG("Vstd:%s[%dfps]\n",
         (gstProductInfo.u8StdType == NTSCS) ? "NTSC" : "PAL",
         stPubAttr.u8FrameRate);
+  /*
+   * Default behaviour stays exactly as before.
+   */
   stPubAttr.enBayer = BAYER_RGGB;
+
+  if (gstProductInfo.u32SensorType == SENSOR_CHIP_SC5332) {
+    XM_S32 bayerTest;
+
+    printf("SC5332: BAYER_RGGB compile value = %d\n",
+           (int)BAYER_RGGB);
+
+    if (sc5332_get_bayer_test(&bayerTest) == XM_SUCCESS) {
+      stPubAttr.enBayer = bayerTest;
+
+      printf("SC5332: using Bayer test value %d "
+             "from /tmp/sc5332_bayer\n",
+             (int)bayerTest);
+    } else {
+      printf("SC5332: no valid /tmp/sc5332_bayer override, "
+             "using BAYER_RGGB (%d)\n",
+             (int)BAYER_RGGB);
+    }
+  }
   stPubAttr.u8SnsHDRmark = 0;
   stPubAttr.u8Vpixel = 0;
   stPubAttr.u8Upscaleren = 0;
