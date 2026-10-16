@@ -211,7 +211,7 @@ static XM_VOID cmos_slow_framerate_set(XM_U16 u16FullLines,
 static XM_VOID cmos_inttime_update(XM_U32 u32IntTime) {
   if (gu32ShutNow == u32IntTime)
     return;
-
+  ERR("SC5332 AE inttime=%u\n", u32IntTime);
   gu32ShutNow = u32IntTime;
 
   u32IntTime = u32IntTime * 2;
