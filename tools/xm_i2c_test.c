@@ -3,7 +3,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
-#include <stdint.h>
 #include <errno.h>
 #include <string.h>
 
@@ -20,11 +19,11 @@ typedef struct {
 static const unsigned int regs[] = {
     0x0100,
 
-    /* Chip identification */
+    /* Chip ID */
     0x3107,
     0x3108,
 
-    /* Timing */
+    /* Horizontal/vertical timing */
     0x320C,
     0x320D,
     0x320E,
@@ -57,9 +56,11 @@ int main(int argc, char **argv)
     if (argc > 1)
         devaddr = strtoul(argv[1], NULL, 0);
 
-    printf("XM530 I2C diagnostic\n");
-    printf("Device: %s\n", dev);
-    printf("I2C address: 0x%02X\n\n", devaddr);
+    printf("XM530 I2C diagnostic tool\n");
+    printf("Device      : %s\n", dev);
+    printf("I2C address : 0x%02X\n", devaddr);
+    printf("Address size: 2 bytes\n");
+    printf("Data size   : 1 byte\n\n");
 
     int fd = open(dev, O_RDWR);
 
@@ -79,6 +80,7 @@ int main(int argc, char **argv)
         d.dev_addr = (unsigned char)devaddr;
         d.reg_addr = regs[i];
         d.addr_byte_num = 2;
+        d.data = 0;
         d.data_byte_num = 1;
 
         errno = 0;
@@ -86,16 +88,16 @@ int main(int argc, char **argv)
         int ret = ioctl(fd, CMD_I2C_READ, &d);
 
         if (ret < 0) {
-            printf("0x%04X : ERROR (%s)\n",
-                   regs[i],
-                   strerror(errno));
+            printf("0x%04X : ERROR ret=%d errno=%d (%s)\n",
+                   regs[i], ret, errno, strerror(errno));
         } else {
             printf("0x%04X : 0x%02X\n",
-                   regs[i],
-                   d.data & 0xff);
+                   regs[i], d.data & 0xff);
         }
     }
 
     close(fd);
+
+    printf("\nDone.\n");
     return 0;
 }
