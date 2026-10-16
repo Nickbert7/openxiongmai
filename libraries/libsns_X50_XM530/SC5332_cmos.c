@@ -18,7 +18,9 @@
 #endif
 #include "mpi_phyvi.h"
 
-#define HD5MP_25P_LINES (1980)
+#define SC5332_VTS_15FPS (2640)
+#define SC5332_FPS        (15)
+#define SC5332_EXP_OFFSET (4)
 
 extern const ISP_CMOS_GAMMA_S gstIspGamma;
 extern XM_VOID XM_MPI_ISP_Memset(XM_U8 *pu8Addr, XM_U8 u8Ch, XM_U32 u32Num);
@@ -143,22 +145,33 @@ static XM_S32 cmos_get_ae_default(AE_SENSOR_DEFAULT_S *pstAeSnsDft) {
     ERR("null pointer when get ae default value!\n");
     return -1;
   }
-  pstAeSnsDft->u32FullLinesStd = HD5MP_25P_LINES;
+
+  pstAeSnsDft->u32FullLinesStd = SC5332_VTS_15FPS;
   pstAeSnsDft->u32FlickerFreq = 0;
   pstAeSnsDft->u8AeCompensation = 0x39;
   pstAeSnsDft->bDelayCfg = XM_FALSE;
-  pstAeSnsDft->u32LinesPer500ms = pstAeSnsDft->u32FullLinesStd * 25 / 2;
-  pstAeSnsDft->u32MaxIntTime = pstAeSnsDft->u32FullLinesStd - 4;
+
+  pstAeSnsDft->u32LinesPer500ms =
+      pstAeSnsDft->u32FullLinesStd * SC5332_FPS / 2;
+
+  pstAeSnsDft->u32MaxIntTime =
+      pstAeSnsDft->u32FullLinesStd - SC5332_EXP_OFFSET;
+
   pstAeSnsDft->u32MinIntTime = 2;
 
   pstAeSnsDft->u32MaxAgain = 15872;
   pstAeSnsDft->u32MinAgain = 1024;
+
   pstAeSnsDft->u32MaxDgain = 4032;
   pstAeSnsDft->u32MinDgain = 128;
+
   pstAeSnsDft->u32ISPDgainShift = 8;
 
-  pstAeSnsDft->u32MaxISPDgain = 8 << pstAeSnsDft->u32ISPDgainShift;
-  pstAeSnsDft->u32MinISPDgain = 1 << pstAeSnsDft->u32ISPDgainShift;
+  pstAeSnsDft->u32MaxISPDgain =
+      8 << pstAeSnsDft->u32ISPDgainShift;
+
+  pstAeSnsDft->u32MinISPDgain =
+      1 << pstAeSnsDft->u32ISPDgainShift;
 
   return 0;
 }
@@ -196,27 +209,17 @@ static XM_VOID cmos_slow_framerate_set(XM_U16 u16FullLines,
 
 // TODO
 static XM_VOID cmos_inttime_update(XM_U32 u32IntTime) {
-  static XM_U32 su32IntTime = 0xFFFFFFFF;
+  if (gu32ShutNow == u32IntTime)
+    return;
+
   gu32ShutNow = u32IntTime;
+
   u32IntTime = u32IntTime * 2;
 
-  if (su32IntTime == u32IntTime)
-    return;
-  su32IntTime = u32IntTime;
+  sensor_write_register(0x3E00, ((u32IntTime & 0xFF000) >> 12));
+  sensor_write_register(0x3E01, ((u32IntTime & 0x0FF0) >> 4));
+  sensor_write_register(0x3E02, ((u32IntTime & 0x000F) << 4));
 
-  sensor_write_register(0x3E02, 0x80);
-  sensor_write_register(0x3E01, 0x49);
-  sensor_write_register(0x3E00, 1);
-
-  //sensor_write_register(0x3E02, 32 * (unsigned char)u32IntTime & 0xE0);
-  //sensor_write_register(0x3E01, (u32IntTime >> 4) & 0xFF);
-  //sensor_write_register(0x3E00, (unsigned short)u32IntTime >> 12);
-
-#if 0
-  sensor_write_register(0x3e00, (u32IntTime >> 12) & 0x0F);
-  sensor_write_register(0x3e01, u32Tmp);
-  sensor_write_register(0x3e02, ((u32IntTime & 0xf) << 4));
-#endif
   return;
 }
 
@@ -284,8 +287,8 @@ static XM_VOID cmos_fps_set(XM_U8 u8Fps, AE_SENSOR_DEFAULT_S *pstAeSnsDft) {
   XM_U32 u32TotalSizeV;
 
   // only for 5M
-  u32TotalSizeV = 2640;
-  u8Fps = 15;
+u32TotalSizeV = SC5332_VTS_15FPS;
+u8Fps = SC5332_FPS;
 #if 0
   switch (u8Fps) {
   // CVBS_PAL   CVBS_NTSC
@@ -318,12 +321,12 @@ static XM_VOID cmos_fps_set(XM_U8 u8Fps, AE_SENSOR_DEFAULT_S *pstAeSnsDft) {
   // Change the frame rate via changing the vertical blanking
   if (pstAeSnsDft != NULL) {
     pstAeSnsDft->u32FullLinesStd = u32TotalSizeV;
-    pstAeSnsDft->u32MaxIntTime = pstAeSnsDft->u32FullLinesStd - 4;
+    pstAeSnsDft->u32MaxIntTime = pstAeSnsDft->u32FullLinesStd - SC5332_EXP_OFFSET;
     pstAeSnsDft->u32LinesPer500ms = pstAeSnsDft->u32FullLinesStd * u8Fps / 2;
   }
 
-  sensor_write_register(0x320E, u32TotalSizeV >> 8);
-  sensor_write_register(0x320F, u32TotalSizeV & 0xFC);
+  sensor_write_register(0x320E, (u32TotalSizeV >> 8) & 0xFF);
+  sensor_write_register(0x320F, u32TotalSizeV & 0xFF);
   XM_MPI_MIPI_RefreshFV(0, u32TotalSizeV);
 }
 
