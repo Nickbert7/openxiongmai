@@ -58,6 +58,7 @@ typedef struct {
 
 typedef struct {
     const char *output_path;
+    const char *vi_device;
 
     uint32_t channel;
     uint32_t retries;
@@ -645,9 +646,15 @@ static void print_usage(const char *program)
         "      Delay between GetFrame attempts.\n"
         "      Default: 100\n\n"
 
-        "  --no-init\n"
-        "      Skip VI INIT ioctl 0x5606.\n\n"
-
+        "  --dangerous-reset-vi\n"
+        "      Execute VI ioctl 0x5606.\n"
+        "      WARNING: this resets the global VI configuration.\n"
+        "      Do NOT use while Majestic is running.\n\n"
+        
+        "  --vi-device <path>\n"
+        "      VI device or /proc/<pid>/fd/<fd> path.\n"
+        "      Default: /dev/vi\n\n"
+        
         "  --metadata-only\n"
         "      Run VI ioctls and display frame metadata, but do not map\n"
         "      or save the returned frame.\n\n"
@@ -728,7 +735,9 @@ static int parse_options(int argc,
 
     options->output_path =
         "/tmp/vi_frame.yuv";
-
+    options->vi_device =
+        "/dev/vi";
+    
     options->channel =
         DEFAULT_CHANNEL;
 
@@ -744,7 +753,7 @@ static int parse_options(int argc,
     options->mmz_end =
         DEFAULT_MMZ_END;
 
-    options->initialize_vi = 1;
+    options->initialize_vi = 0;
     options->mmz_check = 1;
     options->save_combined = 1;
 
@@ -794,9 +803,17 @@ static int parse_options(int argc,
                         "Invalid delay\n");
                 return -1;
             }
+        } else if (!strcmp(argv[i], "--vi-device")) {
+            if (++i >= argc) {
+                fprintf(stderr,
+                        "Missing VI device path\n");
+                return -1;
+            }
 
-        } else if (!strcmp(argv[i], "--no-init")) {
-            options->initialize_vi = 0;
+            options->vi_device = argv[i];
+
+        } else if (!strcmp(argv[i], "--dangerous-reset-vi")) {
+            options->initialize_vi = 1;
 
         } else if (!strcmp(argv[i],
                            "--metadata-only")) {
@@ -938,7 +955,10 @@ int main(int argc, char **argv)
 
     printf("VI channel     : %u\n",
            options.channel);
-
+    
+    printf("VI device      : %s\n",
+       options.vi_device);
+  
     printf("Output         : %s\n",
            options.output_path);
 
@@ -971,16 +991,18 @@ int main(int argc, char **argv)
     if (options.show_proc_status)
         show_vi_proc_status("VI STATUS BEFORE CAPTURE");
 
-    vi_fd = open("/dev/vi", O_RDONLY);
+    vi_fd = open(options.vi_device, O_RDONLY);
 
     if (vi_fd < 0) {
         fprintf(stderr,
-                "Cannot open /dev/vi: %s\n",
+                "Cannot open %s: %s\n",
+                options.vi_device,
                 strerror(errno));
         goto cleanup;
     }
 
-    printf("\nOpened /dev/vi successfully, fd=%d\n",
+    printf("\nOpened %s successfully, fd=%d\n",
+           options.vi_device,
            vi_fd);
 
     if (options.initialize_vi) {
@@ -1006,7 +1028,8 @@ int main(int argc, char **argv)
         fprintf(stderr,
                 "Try diagnostics such as:\n"
                 "  %s --metadata-only --show-proc\n"
-                "  %s --no-init --metadata-only --show-proc\n"
+                "  %s --vi-device /proc/<pid>/fd/<fd> "
+                "--metadata-only --show-proc\n"
                 "  %s -c 1 --metadata-only --show-proc\n",
                 argv[0],
                 argv[0],
