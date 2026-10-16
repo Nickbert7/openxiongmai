@@ -2462,7 +2462,12 @@ static XM_S32 ispSampleMain() {
   ISP_PUB_ATTR_S stPubAttr;
   // 5M
   if (gstProductInfo.u8RsltType == P5M_) {
-    stPubAttr.u8FrameRate = (gstProductInfo.u8StdType == PALS) ? 25 : 30;
+    if (gstProductInfo.u32SensorType == SENSOR_CHIP_SC5332) {
+      stPubAttr.u8FrameRate = 15;
+    } else {
+      stPubAttr.u8FrameRate =
+          (gstProductInfo.u8StdType == PALS) ? 25 : 30;
+    }
   }
   // 4M
   else if (gstProductInfo.u8RsltType == P4M_) {
