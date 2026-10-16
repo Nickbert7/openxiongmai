@@ -142,6 +142,16 @@ void sensor_init() {
     sensor_init_sc5235();
     break;
   case SENSOR_CHIP_SC5332:
+    /*
+     * SC5332 uses:
+     *   I2C device address:       0x30
+     *   register address width:   2 bytes
+     *   register data width:      1 byte
+     */
+    gSnsDevAddr = 0x30;
+    gSnsRegAddrByte = 0x2;
+    gSnsRegDataByte = 0x1;
+
     sensor_init_sc5332();
     break;
   case SENSOR_CHIP_SC335E:
