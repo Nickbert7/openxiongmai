@@ -1,4 +1,4 @@
-name: XM530 test tool
+name: XM530 test tools
 
 on:
   push:
@@ -12,7 +12,7 @@ env:
 
 jobs:
   build:
-    name: Build XM530 I2C test tool
+    name: Build XM530 test tools
     runs-on: ubuntu-latest
 
     steps:
@@ -50,7 +50,7 @@ jobs:
             -o xm_i2c_test \
             tools/xm_i2c_test.c
 
-      - name: Verify binary
+      - name: Verify xm_i2c_test
         run: |
           echo "Binary:"
           file xm_i2c_test
@@ -63,9 +63,40 @@ jobs:
           echo
           ls -lh xm_i2c_test
 
-      - name: Upload artifact
+      - name: Build xm_vi_capture
+        run: |
+          ${CROSS_COMPILE}gcc \
+            -std=c99 \
+            -Os \
+            -static \
+            -Wall \
+            -Wextra \
+            -o xm_vi_capture \
+            tools/xm_vi_capture.c
+
+      - name: Verify xm_vi_capture
+        run: |
+          echo "Binary:"
+          file xm_vi_capture
+
+          echo
+          echo "Architecture:"
+          ${CROSS_COMPILE}readelf -h xm_vi_capture \
+            | grep -E 'Class:|Data:|Machine:'
+
+          echo
+          ls -lh xm_vi_capture
+
+      - name: Upload xm_i2c_test
         uses: actions/upload-artifact@v4
         with:
           name: xm530-i2c-test
           path: xm_i2c_test
+          if-no-files-found: error
+
+      - name: Upload xm_vi_capture
+        uses: actions/upload-artifact@v4
+        with:
+          name: xm530-vi-capture
+          path: xm_vi_capture
           if-no-files-found: error
