@@ -18,9 +18,10 @@
 #endif
 #include "mpi_phyvi.h"
 
-#define SC5332_VTS_15FPS (2640)
-#define SC5332_FPS        (15)
-#define SC5332_EXP_OFFSET (4)
+#define SC5332_VTS_15FPS       (2640)
+#define SC5332_AE_LINES_15FPS  (SC5332_VTS_15FPS * 2)
+#define SC5332_FPS             (15)
+#define SC5332_EXP_OFFSET      (8)
 
 extern const ISP_CMOS_GAMMA_S gstIspGamma;
 extern XM_VOID XM_MPI_ISP_Memset(XM_U8 *pu8Addr, XM_U8 u8Ch, XM_U32 u32Num);
@@ -146,7 +147,7 @@ static XM_S32 cmos_get_ae_default(AE_SENSOR_DEFAULT_S *pstAeSnsDft) {
     return -1;
   }
 
-  pstAeSnsDft->u32FullLinesStd = SC5332_VTS_15FPS;
+  pstAeSnsDft->u32FullLinesStd = SC5332_AE_LINES_15FPS;
   pstAeSnsDft->u32FlickerFreq = 0;
   pstAeSnsDft->u8AeCompensation = 0x39;
   pstAeSnsDft->bDelayCfg = XM_FALSE;
@@ -211,7 +212,6 @@ static XM_VOID cmos_slow_framerate_set(XM_U16 u16FullLines,
 static XM_VOID cmos_inttime_update(XM_U32 u32IntTime) {
   if (gu32ShutNow == u32IntTime)
     return;
-  ERR("SC5332 AE inttime=%u\n", u32IntTime);
   gu32ShutNow = u32IntTime;
 
   u32IntTime = u32IntTime * 2;
@@ -319,10 +319,11 @@ u8Fps = SC5332_FPS;
   }
 #endif
   // Change the frame rate via changing the vertical blanking
+
   if (pstAeSnsDft != NULL) {
-    pstAeSnsDft->u32FullLinesStd = u32TotalSizeV;
-    pstAeSnsDft->u32MaxIntTime = pstAeSnsDft->u32FullLinesStd - SC5332_EXP_OFFSET;
-    pstAeSnsDft->u32LinesPer500ms = pstAeSnsDft->u32FullLinesStd * u8Fps / 2;
+  pstAeSnsDft->u32FullLinesStd = SC5332_AE_LINES_15FPS;
+  pstAeSnsDft->u32MaxIntTime = SC5332_AE_LINES_15FPS - SC5332_EXP_OFFSET;
+  pstAeSnsDft->u32LinesPer500ms = SC5332_AE_LINES_15FPS * u8Fps / 2;
   }
 
   sensor_write_register(0x320E, (u32TotalSizeV >> 8) & 0xFF);
