@@ -75,12 +75,15 @@ jobs:
             [ -f "$f" ] || { echo "MISSING: $f" >&2; exit 1; }
             echo "ok: $f ($(stat -c%s "$f") bytes)"
           done
-      - name: Upload SC5332 X50 test library
+      - name: Upload SC5332 XM530 test libraries
         uses: actions/upload-artifact@v4
         with:
-          name: SC5332-X50-fix
-          path: libraries/libsns_X50_XM530/libsns_X50_XM530.so
+          name: SC5332-XM530-fix
+          path: |
+            libraries/libsns_X50_XM530/libsns_X50_XM530.so
+            libraries/libispapp_XM530/libispapp_XM530.so
           if-no-files-found: error
+
       - name: Assert exported symbols
         run: |
           fail=0
@@ -127,7 +130,36 @@ jobs:
             done
           done
           exit $fail
+      - name: Verify XM530 ISP build
+        shell: bash
+        run: |
+          LIB="libraries/libispapp_XM530/libispapp_XM530.so"
 
+          echo "=== Modified source ==="
+          grep -R -n --exclude-dir=.git \
+            'DEBUG ExtCft_GetIspWndRect' libraries || {
+              echo "::error::DEBUG ExtCft_GetIspWndRect not found in source tree"
+              exit 1
+            }
+
+          echo
+          echo "=== libispapp ==="
+          ls -l "$LIB"
+          sha256sum "$LIB"
+
+          echo
+          echo "=== Debug strings in libispapp ==="
+          strings "$LIB" | grep -E \
+            'DEBUG ExtCft|DEBUG before VI|DEBUG after VI|Vstd:' || true
+
+          echo
+          echo "=== Verify marker ==="
+          if ! strings "$LIB" | grep -q 'DEBUG ExtCft_GetIspWndRect'; then
+            echo "::error::Modified ISP code is NOT present in libispapp_XM530.so"
+            exit 1
+          fi
+
+          echo "OK: modified ISP code is present in libispapp_XM530.so"
   #
   # kernel-modules
   #
@@ -212,19 +244,3 @@ jobs:
               *) echo "unexpected vermagic for $ko, want ${{ matrix.kernel_version }}" >&2; exit 1 ;;
             esac
           done
-      - name: Verify XM530 ISP build
-        shell: bash
-        run: |
-          echo "=== Find libispapp ==="
-          find . -type f -name 'libispapp_XM530.so*' -print
-
-          echo "=== Find modified source ==="
-          grep -R -n --exclude-dir=.git \
-            'DEBUG ExtCft_GetIspWndRect' . || true
-
-          echo "=== Inspect built libraries ==="
-          find . -type f -name 'libispapp_XM530.so*' -exec sh -c '
-            echo "===== $1 ====="
-            strings "$1" | grep -E \
-              "DEBUG ExtCft|DEBUG before VI|DEBUG after VI|Vstd:" || true
-          ' _ {} \;
