@@ -150,7 +150,31 @@ jobs:
           echo "=== Disassembly around XM_MPI_MIPI_GetDevAttr ==="
           ${CROSS_COMPILE}objdump -d "$BIN" \
             | grep -A 80 -B 10 '<XM_MPI_MIPI_GetDevAttr>' || true
-            
+                    echo
+          echo "=== XM_MPI_MIPI_SetDevAttr disassembly ==="
+          ${CROSS_COMPILE}objdump -d \
+            --start-address=0x000b790c \
+            --stop-address=0x000b7ca4 \
+            "$BIN"
+
+          echo
+          echo "=== XM_MPI_MIPI_GetDevAttr disassembly ==="
+          ${CROSS_COMPILE}objdump -d \
+            --start-address=0x000b7ca4 \
+            --stop-address=0x000b7d00 \
+            "$BIN"
+
+          echo
+          echo "=== XM_MPI_MIPI_RefreshFV disassembly ==="
+          ${CROSS_COMPILE}objdump -d \
+            --start-address=0x000b7d00 \
+            --stop-address=0x000b7d78 \
+            "$BIN"  
+          echo
+          echo "=== Majestic relevant strings with offsets ==="
+          strings -t x "$BIN" \
+            | grep -Ei 'mipimode|mipioutclk|MIPI_SET_DEV_ATTR|XM_MPI_MIPI' || true
+
       - name: Verify outputs exist
         run: |
           for f in \
