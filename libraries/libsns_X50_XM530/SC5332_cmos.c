@@ -206,63 +206,59 @@ static XM_VOID cmos_inttime_update(XM_U32 u32IntTime) {
 
   u32IntTimeX2 = u32IntTime * 2;
 
-  sensor_write_register(0x3E02, (u32IntTime << 5) & 0xFF);
+  sensor_write_register(0x3E02, (u32IntTime << 5) & 0xE0);
   sensor_write_register(0x3E01, (u32IntTimeX2 >> 4) & 0xFF);
   sensor_write_register(0x3E00, (u32IntTimeX2 >> 12) & 0x0F);
 
   return;
 }
 
-static XM_VOID cmos_gains_update(XM_U32 u32Again, XM_U32 u32Dgain) {
-  static XM_U32 su32Again = 0xFFFFFFFF;
-  static XM_U32 su32Dgain = 0xFFFFFFFF;
-
-  if (su32Again == u32Again &&
-      su32Dgain == u32Dgain)
-    return;
-
-  su32Again = u32Again;
-  su32Dgain = u32Dgain;
-
-  sensor_write_register(0x3E08,
-                        ((u32Again >> 8) << 2) | 0x03);
-  sensor_write_register(0x3E09,
-                        u32Again & 0xFF);
-
-  sensor_write_register(0x3E06,
-                        (u32Dgain >> 8) & 0xFF);
-  sensor_write_register(0x3E07,
-                        u32Dgain & 0xFF);
-
+static XM_VOID cmos_gains_update(XM_U32 u32Again,
+                                 XM_U32 u32Dgain) {
+  /*
+   * Temporarily disabled.
+   * The SC5332 analog- and digital-gain calculation callbacks
+   * still need to be reconstructed from the original firmware.
+   */
   return;
 }
 
 /* the function of sensor set fps */
-static XM_VOID cmos_fps_set(XM_U8 u8Fps, AE_SENSOR_DEFAULT_S *pstAeSnsDft) {
+static XM_VOID cmos_fps_set(XM_U8 u8Fps,
+                            AE_SENSOR_DEFAULT_S *pstAeSnsDft) {
   XM_U32 u32TotalSizeV;
 
-  /*
-   * Original SC5332 firmware:
-   * 5M mode uses 15 fps with 3300 full lines.
-   */
-  u8Fps = 15;
-  u32TotalSizeV = 3300;
+  if (gstRlstType == P1080_ ||
+      gstRlstType == P4M_) {
+    u8Fps = 20;
+    u32TotalSizeV = 0x07BC;
 
-  DEBUG("cmos_fps_set SC5332 5M 15fps\n");
+    DEBUG("cmos_fps_set SC5332 5M 20fps\n");
+  } else {
+    u8Fps = 15;
+    u32TotalSizeV = 0x0A50;
 
-  if (pstAeSnsDft != NULL) {
+    DEBUG("cmos_fps_set SC5332 5M 15fps\n");
+  }
+
+  if (pstAeSnsDft != XM_NULL) {
     pstAeSnsDft->u32FullLinesStd = u32TotalSizeV;
     pstAeSnsDft->u32MaxIntTime = u32TotalSizeV - 4;
     pstAeSnsDft->u32LinesPer500ms =
         u32TotalSizeV * u8Fps / 2;
   }
 
-  sensor_write_register(0x320E,
-                        (u32TotalSizeV >> 8) & 0xFF);
-  sensor_write_register(0x320F,
-                        u32TotalSizeV & 0xFF);
+  sensor_write_register(
+      0x320E,
+      (u32TotalSizeV >> 8) & 0xFF);
+
+  sensor_write_register(
+      0x320F,
+      u32TotalSizeV & 0xFC);
 
   XM_MPI_MIPI_RefreshFV(0, u32TotalSizeV);
+
+  return;
 }
 
 
