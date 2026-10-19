@@ -212,3 +212,19 @@ jobs:
               *) echo "unexpected vermagic for $ko, want ${{ matrix.kernel_version }}" >&2; exit 1 ;;
             esac
           done
+      - name: Verify XM530 ISP build
+        shell: bash
+        run: |
+          echo "=== Find libispapp ==="
+          find . -type f -name 'libispapp_XM530.so*' -print
+
+          echo "=== Find modified source ==="
+          grep -R -n --exclude-dir=.git \
+            'DEBUG ExtCft_GetIspWndRect' . || true
+
+          echo "=== Inspect built libraries ==="
+          find . -type f -name 'libispapp_XM530.so*' -exec sh -c '
+            echo "===== $1 ====="
+            strings "$1" | grep -E \
+              "DEBUG ExtCft|DEBUG before VI|DEBUG after VI|Vstd:" || true
+          ' _ {} \;
