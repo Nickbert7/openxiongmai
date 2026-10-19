@@ -194,88 +194,46 @@ static XM_VOID cmos_slow_framerate_set(XM_U16 u16FullLines,
 #endif
 }
 
-// TODO
 static XM_VOID cmos_inttime_update(XM_U32 u32IntTime) {
   static XM_U32 su32IntTime = 0xFFFFFFFF;
-  gu32ShutNow = u32IntTime;
-  u32IntTime = u32IntTime * 2;
+  XM_U32 u32IntTimeX2;
 
   if (su32IntTime == u32IntTime)
     return;
+
   su32IntTime = u32IntTime;
+  gu32ShutNow = u32IntTime;
 
-  sensor_write_register(0x3E02, 0x80);
-  sensor_write_register(0x3E01, 0x49);
-  sensor_write_register(0x3E00, 1);
+  u32IntTimeX2 = u32IntTime * 2;
 
-  //sensor_write_register(0x3E02, 32 * (unsigned char)u32IntTime & 0xE0);
-  //sensor_write_register(0x3E01, (u32IntTime >> 4) & 0xFF);
-  //sensor_write_register(0x3E00, (unsigned short)u32IntTime >> 12);
+  sensor_write_register(0x3E02, (u32IntTime << 5) & 0xFF);
+  sensor_write_register(0x3E01, (u32IntTimeX2 >> 4) & 0xFF);
+  sensor_write_register(0x3E00, (u32IntTimeX2 >> 12) & 0x0F);
 
-#if 0
-  sensor_write_register(0x3e00, (u32IntTime >> 12) & 0x0F);
-  sensor_write_register(0x3e01, u32Tmp);
-  sensor_write_register(0x3e02, ((u32IntTime & 0xf) << 4));
-#endif
   return;
 }
 
-// TODO
 static XM_VOID cmos_gains_update(XM_U32 u32Again, XM_U32 u32Dgain) {
-  static XM_U32 Preu32Again = 0xffff;
-  //XM_U32 u32Tmp;
-  if (Preu32Again == u32Again)
+  static XM_U32 su32Again = 0xFFFFFFFF;
+  static XM_U32 su32Dgain = 0xFFFFFFFF;
+
+  if (su32Again == u32Again &&
+      su32Dgain == u32Dgain)
     return;
-  Preu32Again = u32Again;
-  // 2.GainUpdate
-#if 0
-  u32Tmp = ((u32Again & 0xf0) >> 2) | 0x03;
-  sensor_write_register(0x3e08, u32Tmp);
-  sensor_write_register(0x3e09, ((u32Again & 0x0f) + 0x20));
-#endif
-#if 0
-	// 2.LogicUpdate
-    if(u32Tmp < 0x07)//[gain<2]
-    {
-        sensor_write_register(0x3301,0x1c);//20181101  [12,24]
-        sensor_write_register(0x3630,0x30);//20180713
-        sensor_write_register(0x3633,0x34);//20180713
-        sensor_write_register(0x3622,0xf6);
-        sensor_write_register(0x363a,0x83);
-    }
-    else if(u32Tmp < 0x0f)//[4>gain>=2]
-    {
-        sensor_write_register(0x3301,0x28);//20181101  [18,66]
-        sensor_write_register(0x3630,0x34);//20180129
-        sensor_write_register(0x3633,0x35);//20180713
-        sensor_write_register(0x3622,0xf6);
-        sensor_write_register(0x363a,0x87);
-    }
-    else if(u32Tmp < 0x1f)//[8>gain>=4]
-    {
-        sensor_write_register(0x3301,0x28);//20181101  [1a,66]
-        sensor_write_register(0x3630,0x24);//1114
-        sensor_write_register(0x3633,0x35);//20180713
-        sensor_write_register(0x3622,0xf6);
-        sensor_write_register(0x363a,0x9f);
-    }
-    else//[15.5>gain>=8]
-    {
-        sensor_write_register(0x3301,0x48);//20181101  [1e,66]
-        sensor_write_register(0x3630,0x16); 
-        sensor_write_register(0x3633,0x45);//20180713
-        sensor_write_register(0x3622,0xf6);
-        sensor_write_register(0x363a,0x9f);
-    }
-    /*
-    [gain>=15.75]
-    sensor_write_register(0x3301,0x48);//20181101  [21,66]
-    sensor_write_register(0x3630,0x09);//0f  1226
-    sensor_write_register(0x3633,0x46);//20180713
-    sensor_write_register(0x3622,0x16);//20180713
-    sensor_write_register(0x363a,0x9f);
-    */
-#endif
+
+  su32Again = u32Again;
+  su32Dgain = u32Dgain;
+
+  sensor_write_register(0x3E08,
+                        ((u32Again >> 8) << 2) | 0x03);
+  sensor_write_register(0x3E09,
+                        u32Again & 0xFF);
+
+  sensor_write_register(0x3E06,
+                        (u32Dgain >> 8) & 0xFF);
+  sensor_write_register(0x3E07,
+                        u32Dgain & 0xFF);
+
   return;
 }
 
@@ -283,49 +241,30 @@ static XM_VOID cmos_gains_update(XM_U32 u32Again, XM_U32 u32Dgain) {
 static XM_VOID cmos_fps_set(XM_U8 u8Fps, AE_SENSOR_DEFAULT_S *pstAeSnsDft) {
   XM_U32 u32TotalSizeV;
 
-  // only for 5M
-  u32TotalSizeV = 2640;
+  /*
+   * Original SC5332 firmware:
+   * 5M mode uses 15 fps with 3300 full lines.
+   */
   u8Fps = 15;
-#if 0
-  switch (u8Fps) {
-  // CVBS_PAL   CVBS_NTSC
-  case 50:
-  case 60: // 1560*770*59.94
-    DEBUG("cmos_fps_set 5M 50/60fps\n");
-    break;
-  case 25: // 4M_25Fps
-  case 30: // 4M_30Fps
-    DEBUG("cmos_fps_set 5M 25/30fps\n");
-    break;
-  case 15: // 5M_15Fps
-    u8Fps = 15;
-    u32TotalSizeV = HD5MP_25P_LINES * 20 / u8Fps;
-    DEBUG("cmos_fps_set 5M 15fps\n");
-    break;
-  case 10: // 5M_10Fps
-    u8Fps = 10;
-    u32TotalSizeV = HD5MP_25P_LINES * 20 / u8Fps;
-    DEBUG("cmos_fps_set 5M 10fps\n");
-    break;
-  case 20: // 5M_20Fps
-  default:
-    u8Fps = 20;
-    u32TotalSizeV = HD5MP_25P_LINES;
-    DEBUG("cmos_fps_set 5M 20fps\n");
-    break;
-  }
-#endif
-  // Change the frame rate via changing the vertical blanking
+  u32TotalSizeV = 3300;
+
+  DEBUG("cmos_fps_set SC5332 5M 15fps\n");
+
   if (pstAeSnsDft != NULL) {
     pstAeSnsDft->u32FullLinesStd = u32TotalSizeV;
-    pstAeSnsDft->u32MaxIntTime = pstAeSnsDft->u32FullLinesStd - 4;
-    pstAeSnsDft->u32LinesPer500ms = pstAeSnsDft->u32FullLinesStd * u8Fps / 2;
+    pstAeSnsDft->u32MaxIntTime = u32TotalSizeV - 4;
+    pstAeSnsDft->u32LinesPer500ms =
+        u32TotalSizeV * u8Fps / 2;
   }
 
-  sensor_write_register(0x320E, u32TotalSizeV >> 8);
-  sensor_write_register(0x320F, u32TotalSizeV & 0xFC);
+  sensor_write_register(0x320E,
+                        (u32TotalSizeV >> 8) & 0xFF);
+  sensor_write_register(0x320F,
+                        u32TotalSizeV & 0xFF);
+
   XM_MPI_MIPI_RefreshFV(0, u32TotalSizeV);
 }
+
 
 /****************************************************************************
  * AWB
