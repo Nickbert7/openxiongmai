@@ -1605,50 +1605,52 @@ static void GetProductInfo() {
 
     stComboDevAttr.mipi_attr.delay = 0x00000000; // mipi内部delay
     break;
-  case SENSOR_CHIP_SC5332:
-    if (gstParamIn.enRslt == 4)
-      gstProductInfo.u8RsltType = 4;
-    else
-      gstProductInfo.u8RsltType = 5;
-    gstProductInfo.u8SensorClk = SENSORCLK_27M;
-    gstProductInfo.SnsBwide = 1;
-    gstProductInfo.bHsyncRecEn = 1;
-    gu8PclkEdge = 0;
-    stComboDevAttr.input_mode = 1;
-    stComboDevAttr.mipi_attr.lane = 1;
-    stComboDevAttr.mipi_attr.depth = 1;
-    stComboDevAttr.mipi_attr.MipiCtrl = 0x1400B8;
-    if (gstProductInfo.u8RsltType == 4) {
-      stComboDevAttr.mipi_attr.snsMpOutclk = 90000000;
-      stComboDevAttr.mipi_attr.snsAllLine = 1500;
-      stComboDevAttr.mipi_attr.snsAllPixs = 3840;
-      stComboDevAttr.mipi_attr.snsActiveLine = 1448;
-      stComboDevAttr.mipi_attr.snsActivePixs = 2560;
-      stComboDevAttr.mipi_attr.bMpDvpclk = 144000000;
-      stComboDevAttr.mipi_attr.bAllPixs = 3840;
-    } else {
-      stComboDevAttr.mipi_attr.snsAllPixs = 3000;
-      stComboDevAttr.mipi_attr.snsAllLine = 2640;
-      stComboDevAttr.mipi_attr.snsActivePixs = 2600;
-      stComboDevAttr.mipi_attr.snsActiveLine = 1952;
-      stComboDevAttr.mipi_attr.bMpDvpclk = 118800000;
-      stComboDevAttr.mipi_attr.bAllPixs = 3000;
+case SENSOR_CHIP_SC5332:
+  gstProductInfo.u8StdType =
+      (gstParamIn.u8Vstd == VSTDNULL)
+          ? PALS
+          : gstParamIn.u8Vstd;
 
-      // ?
-      stComboDevAttr.mipi_attr.snsMpOutclk =
-          stComboDevAttr.mipi_attr.bMpDvpclk * au8Bit[gstProductInfo.SnsBwide] /
-          (1 << stComboDevAttr.mipi_attr.lane) /
-          (1 << stComboDevAttr.mipi_attr.lane); // sensor输出的mipi
+  if (gstParamIn.enRslt == P4M_)
+    gstProductInfo.u8RsltType = P4M_;
+  else
+    gstProductInfo.u8RsltType = P5M_;
 
-      /*
+  gstProductInfo.u8SensorClk = SENSORCLK_27M;
+  gstProductInfo.SnsBwide = SENSBWIDE_10BIT;
+  gstProductInfo.bHsyncRecEn = XM_TRUE;
+  gu8PclkEdge = 0;
+
+  stComboDevAttr.input_mode = SENSCONT_MIPI;
+  stComboDevAttr.mipi_attr.lane = MIPI_2LANE;
+  stComboDevAttr.mipi_attr.depth = MIPI_10BIT;
+  stComboDevAttr.mipi_attr.MipiCtrl = 0x001400B8;
+
+  if (gstProductInfo.u8RsltType == P4M_) {
+    stComboDevAttr.mipi_attr.snsMpOutclk = 90000000;
+    stComboDevAttr.mipi_attr.snsAllLine = 1500;
+    stComboDevAttr.mipi_attr.snsAllPixs = 3840;
+    stComboDevAttr.mipi_attr.snsActiveLine = 1448;
+    stComboDevAttr.mipi_attr.snsActivePixs = 2560;
+    stComboDevAttr.mipi_attr.bMpDvpclk = 144000000;
+    stComboDevAttr.mipi_attr.bAllPixs = 3840;
+  } else {
+    stComboDevAttr.mipi_attr.snsAllPixs = 3000;
+    stComboDevAttr.mipi_attr.snsAllLine = 2640;
+    stComboDevAttr.mipi_attr.snsActivePixs = 2600;
+    stComboDevAttr.mipi_attr.snsActiveLine = 1952;
+    stComboDevAttr.mipi_attr.bMpDvpclk = 118800000;
+    stComboDevAttr.mipi_attr.bAllPixs = 3000;
+
     stComboDevAttr.mipi_attr.snsMpOutclk =
         stComboDevAttr.mipi_attr.bMpDvpclk *
-            (unsigned int)(unsigned __int8)v53[gstProductInfo.SnsBwide - 4] >>
-        SLOBYTE(stComboDevAttr.mipi_attr.lane) >>
-        SLOBYTE(stComboDevAttr.mipi_attr.lane);*/
-    }
-    stComboDevAttr.mipi_attr.delay = 0x1010101;
-    break;
+        au8Bit[gstProductInfo.SnsBwide] /
+        (1 << stComboDevAttr.mipi_attr.lane) /
+        (1 << stComboDevAttr.mipi_attr.lane);
+  }
+
+  stComboDevAttr.mipi_attr.delay = 0x01010101;
+  break;
   case SENSOR_CHIP_SC4236:
     gstProductInfo.u8StdType =
         (gstParamIn.u8Vstd == VSTDNULL) ? PALS : gstParamIn.u8Vstd;
@@ -2462,7 +2464,16 @@ static XM_S32 ispSampleMain() {
   ISP_PUB_ATTR_S stPubAttr;
   // 5M
   if (gstProductInfo.u8RsltType == P5M_) {
-    stPubAttr.u8FrameRate = (gstProductInfo.u8StdType == PALS) ? 25 : 30;
+    if (gstProductInfo.u32SensorType == SENSOR_CHIP_SC5332) {
+      /*
+       * SC5332 5M mode:
+       * VTS 0x0A50 = 2640 lines at 15 fps.
+       */
+      stPubAttr.u8FrameRate = 15;
+    } else {
+      stPubAttr.u8FrameRate =
+          (gstProductInfo.u8StdType == PALS) ? 25 : 30;
+    }
   }
   // 4M
   else if (gstProductInfo.u8RsltType == P4M_) {
