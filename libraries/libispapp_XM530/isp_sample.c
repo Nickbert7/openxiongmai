@@ -1618,7 +1618,7 @@ case SENSOR_CHIP_SC5332:
 
   gstProductInfo.u8SensorClk = SENSORCLK_27M;
   gstProductInfo.SnsBwide = SENSBWIDE_10BIT;
-  gstProductInfo.bHsyncRecEn = XM_TRUE;
+  gstProductInfo.bHsyncRecEn = XM_FALSE;
   gu8PclkEdge = 0;
 
   stComboDevAttr.input_mode = SENSCONT_MIPI;
