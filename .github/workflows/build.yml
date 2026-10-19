@@ -64,7 +64,17 @@ jobs:
           echo "::group::libmpi"
           make -C libraries/libmpi CROSS_COMPILE="$CROSS_COMPILE" PATH="$PATH"
           echo "::endgroup::"
+          
+      - name: Inspect MIPI symbols
+        run: |
+          LIB="libraries/libispapp_XM530/libispapp_XM530.so"
 
+          echo "=== NM dynamic ==="
+          ${CROSS_COMPILE}nm -D "$LIB" | grep 'XM_MPI_MIPI' || true
+
+          echo "=== READELF symbols ==="
+          ${CROSS_COMPILE}readelf -Ws "$LIB" | grep 'XM_MPI_MIPI' || true
+          
       - name: Verify outputs exist
         run: |
           for f in \
