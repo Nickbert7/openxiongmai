@@ -2510,10 +2510,26 @@ static XM_S32 ispSampleMain() {
   stPubAttr.stVFAttr.opType = OP_TYPE_AUTO;
   s32Ret = ExtCft_GetIspWndRect(stPubAttr.u8FrameRate, &(stPubAttr.stWndRect));
 
-#if (defined SOC_SYSTEM) || (defined SOC_ALIOS)
-  if (s32Ret != XM_SUCCESS) {
-    GetIspWndRect(stPubAttr.u8FrameRate, &(stPubAttr.stWndRect));
-  }
+  printf("DEBUG ExtCft_GetIspWndRect:\n");
+  printf("  ret    = %d\n", s32Ret);
+  printf("  sensor = %u\n", gstProductInfo.u32SensorType);
+  printf("  rslt   = %u\n", gstProductInfo.u8RsltType);
+  printf("  fps    = %u\n", stPubAttr.u8FrameRate);
+  printf("  X      = %d\n", stPubAttr.stWndRect.s32X);
+  printf("  Y      = %d\n", stPubAttr.stWndRect.s32Y);
+  printf("  Width  = %u\n", stPubAttr.stWndRect.u32Width);
+  printf("  Height = %u\n", stPubAttr.stWndRect.u32Height);
+
+  #if (defined SOC_SYSTEM) || (defined SOC_ALIOS)
+    if (s32Ret != XM_SUCCESS) {
+      GetIspWndRect(stPubAttr.u8FrameRate, &(stPubAttr.stWndRect));
+
+      printf("DEBUG GetIspWndRect fallback:\n");
+      printf("  X      = %d\n", stPubAttr.stWndRect.s32X);
+      printf("  Y      = %d\n", stPubAttr.stWndRect.s32Y);
+      printf("  Width  = %u\n", stPubAttr.stWndRect.u32Width);
+      printf("  Height = %u\n", stPubAttr.stWndRect.u32Height);
+    }
 
   if (gstParamIn.u8Mode) {
     VI_CHN_ATTR_S stAttr;
@@ -2590,12 +2606,26 @@ static XM_S32 ispSampleMain() {
     ERR("sensor_register_callback failed!\n");
     return XM_FAILURE;
   }
-  s32Ret = XM_MPI_ISP_SetPubAttr(gIspDevApp, &stPubAttr);
+ s32Ret = XM_MPI_ISP_SetPubAttr(gIspDevApp, &stPubAttr);
   if (s32Ret != XM_SUCCESS) {
     ERR("XM_MPI_ISP_SetPubAttr failed!\n");
     return XM_FAILURE;
   }
+
+  printf("DEBUG before VI_WinSet:\n");
+  printf("  H_BEGIN = 0x%08X\n", Read_IspReg(VI_CUT_BEGIN_H));
+  printf("  H_END   = 0x%08X\n", Read_IspReg(VI_CUT_END_H));
+  printf("  V_BEGIN = 0x%08X\n", Read_IspReg(VI_CUT_BEGIN_V));
+  printf("  V_END   = 0x%08X\n", Read_IspReg(VI_CUT_END_V));
+
   VI_WinSet(1, 0, 0, 0, 0);
+
+  printf("DEBUG after VI_WinSet:\n");
+  printf("  H_BEGIN = 0x%08X\n", Read_IspReg(VI_CUT_BEGIN_H));
+  printf("  H_END   = 0x%08X\n", Read_IspReg(VI_CUT_END_H));
+  printf("  V_BEGIN = 0x%08X\n", Read_IspReg(VI_CUT_BEGIN_V));
+  printf("  V_END   = 0x%08X\n", Read_IspReg(VI_CUT_END_V));
+
   s32Ret = XM_MPI_ISP_Init(gIspDevApp);
   if (s32Ret != XM_SUCCESS) {
     ERR("XM_MPI_ISP_Init failed!\n");
