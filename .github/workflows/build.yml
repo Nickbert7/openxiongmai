@@ -74,6 +74,17 @@ jobs:
 
           echo "=== READELF symbols ==="
           ${CROSS_COMPILE}readelf -Ws "$LIB" | grep 'XM_MPI_MIPI' || true
+          echo
+          echo "=== Search MIPI provider in all built objects ==="
+          find libraries -type f \( -name '*.so' -o -name '*.a' \) -print0 |
+          while IFS= read -r -d '' f; do
+            result=$(${CROSS_COMPILE}nm -A --defined-only "$f" 2>/dev/null \
+              | grep -E 'XM_MPI_MIPI_(Set|Get)DevAttr' || true)
+            if [ -n "$result" ]; then
+              echo "=== $f ==="
+              echo "$result"
+            fi
+          done
           
       - name: Verify outputs exist
         run: |
