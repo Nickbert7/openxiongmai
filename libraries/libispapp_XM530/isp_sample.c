@@ -2564,7 +2564,7 @@ static XM_S32 ispSampleMain() {
       break;
     case P5M_:
       stAttr.stDestSize.u32Width = 2600;
-      stAttr.stDestSize.u32Height = 1954;
+      stAttr.stDestSize.u32Height = 1952;
       break;
     default:
       stAttr.stDestSize.u32Width = 1280;
@@ -2620,7 +2620,22 @@ static XM_S32 ispSampleMain() {
         (unsigned int)Read_IspReg(VI_CUT_END_V));
 
   if (gstProductInfo.u32SensorType == SENSOR_CHIP_SC5332) {
-    DEBUG("SC5332 TEST: VI_WinSet SKIPPED\n");
+    XM_S32 x = stPubAttr.stWndRect.s32X;
+    XM_S32 y = stPubAttr.stWndRect.s32Y;
+    XM_U32 width = stPubAttr.stWndRect.u32Width;
+    XM_U32 height = stPubAttr.stWndRect.u32Height;
+
+    Write_IspReg(VI_CUT_BEGIN_H, x);
+    Write_IspReg(VI_CUT_END_H, x + width - 1);
+    Write_IspReg(VI_CUT_BEGIN_V, y);
+    Write_IspReg(VI_CUT_END_V, y + height - 1);
+
+    DEBUG("SC5332 TEST: explicit inclusive CUT "
+          "H=%08X..%08X V=%08X..%08X\n",
+          (unsigned int)x,
+          (unsigned int)(x + width - 1),
+          (unsigned int)y,
+          (unsigned int)(y + height - 1));
   } else {
     VI_WinSet(1, 0, 0, 0, 0);
   }
