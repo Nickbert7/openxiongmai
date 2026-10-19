@@ -2620,16 +2620,10 @@ static XM_S32 ispSampleMain() {
         (unsigned int)Read_IspReg(VI_CUT_END_V));
 
   if (gstProductInfo.u32SensorType == SENSOR_CHIP_SC5332) {
-    Write_IspReg(VI_CUT_BEGIN_H, 0);
-    Write_IspReg(VI_CUT_END_H, 2600);
-    Write_IspReg(VI_CUT_BEGIN_V, 0);
-    Write_IspReg(VI_CUT_END_V, 1088);
-
-    DEBUG("SC5332 TEST: CUT 2600x1088\n");
+    DEBUG("SC5332: VI_WinSet SKIPPED, keeping existing CUT\n");
   } else {
     VI_WinSet(1, 0, 0, 0, 0);
   }
-
   DEBUG("SC5332 CUT after VI_WinSet: H=%08X..%08X V=%08X..%08X\n",
         (unsigned int)Read_IspReg(VI_CUT_BEGIN_H),
         (unsigned int)Read_IspReg(VI_CUT_END_H),
