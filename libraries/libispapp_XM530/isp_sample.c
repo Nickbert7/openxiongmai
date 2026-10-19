@@ -2620,22 +2620,12 @@ static XM_S32 ispSampleMain() {
         (unsigned int)Read_IspReg(VI_CUT_END_V));
 
   if (gstProductInfo.u32SensorType == SENSOR_CHIP_SC5332) {
-    XM_S32 x = stPubAttr.stWndRect.s32X;
-    XM_S32 y = stPubAttr.stWndRect.s32Y;
-    XM_U32 width = stPubAttr.stWndRect.u32Width;
-    XM_U32 height = stPubAttr.stWndRect.u32Height;
+    Write_IspReg(VI_CUT_BEGIN_H, 0);
+    Write_IspReg(VI_CUT_END_H, 2600);
+    Write_IspReg(VI_CUT_BEGIN_V, 0);
+    Write_IspReg(VI_CUT_END_V, 1088);
 
-    Write_IspReg(VI_CUT_BEGIN_H, x);
-    Write_IspReg(VI_CUT_END_H, x + width - 1);
-    Write_IspReg(VI_CUT_BEGIN_V, y);
-    Write_IspReg(VI_CUT_END_V, y + height - 1);
-
-    DEBUG("SC5332 TEST: explicit inclusive CUT "
-          "H=%08X..%08X V=%08X..%08X\n",
-          (unsigned int)x,
-          (unsigned int)(x + width - 1),
-          (unsigned int)y,
-          (unsigned int)(y + height - 1));
+    DEBUG("SC5332 TEST: CUT 2600x1088\n");
   } else {
     VI_WinSet(1, 0, 0, 0, 0);
   }
