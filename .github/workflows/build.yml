@@ -135,12 +135,15 @@ jobs:
         run: |
           LIB="libraries/libispapp_XM530/libispapp_XM530.so"
 
-          echo "=== Modified source ==="
-          grep -R -n --exclude-dir=.git \
-            'DEBUG ExtCft_GetIspWndRect' libraries || {
-              echo "::error::DEBUG ExtCft_GetIspWndRect not found in source tree"
-              exit 1
-            }
+          echo "=== Verify modified source ==="
+
+          if ! grep -R -q --exclude-dir=.git \
+            'SC5332 WND ext:' libraries; then
+            echo "::error::SC5332 diagnostic code not found in source tree"
+            exit 1
+          fi
+
+          echo "OK: SC5332 diagnostic source found"
 
           echo
           echo "=== libispapp ==="
@@ -148,18 +151,31 @@ jobs:
           sha256sum "$LIB"
 
           echo
-          echo "=== Debug strings in libispapp ==="
+          echo "=== Diagnostic strings ==="
           strings "$LIB" | grep -E \
-            'DEBUG ExtCft|DEBUG before VI|DEBUG after VI|Vstd:' || true
+            'SC5332 WND|SC5332 CUT'
 
           echo
-          echo "=== Verify marker ==="
-          if ! strings "$LIB" | grep -q 'DEBUG ExtCft_GetIspWndRect'; then
-            echo "::error::Modified ISP code is NOT present in libispapp_XM530.so"
-            exit 1
-          fi
+          echo "=== Verify compiled markers ==="
 
-          echo "OK: modified ISP code is present in libispapp_XM530.so"
+          for marker in \
+            'SC5332 WND ext:' \
+            'SC5332 WND final:' \
+            'SC5332 CUT before VI_WinSet:' \
+            'SC5332 CUT after VI_WinSet:' \
+            'SC5332 CUT after ISP_Init:' \
+            'SC5332 CUT after IspDataInit:' \
+            'SC5332 CUT after PN_IspSet:'
+          do
+            if ! strings "$LIB" | grep -q "$marker"; then
+              echo "::error::Missing marker in libispapp: $marker"
+              exit 1
+            fi
+            echo "OK: $marker"
+          done
+
+          echo
+          echo "OK: all SC5332 diagnostic markers are present"
   #
   # kernel-modules
   #
