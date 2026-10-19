@@ -126,15 +126,38 @@ static XM_VOID cmos_again_calc_table(XM_U32 u32InTimes,
   return;
 }
 
-// TODO
-static XM_VOID cmos_dgain_calc_table(XM_U32 u32InTimes,
-                                     AE_SENSOR_GAININFO_S *pstAeSnsGainInfo) {
+static XM_VOID cmos_dgain_calc_table(
+    XM_U32 u32InTimes,
+    AE_SENSOR_GAININFO_S *pstAeSnsGainInfo) {
+  XM_U32 u32Shift = 0;
+
   if (XM_NULL == pstAeSnsGainInfo) {
     ERR("cmos_dgain_calc_table failed!\n");
     return;
   }
-  pstAeSnsGainInfo->u32SnsTimes = u32InTimes;
+
   pstAeSnsGainInfo->u32GainDb = 0;
+
+  /*
+   * Keep the register mantissa within 8 bits.
+   * Each shift adds another high-gain stage bit.
+   */
+  while (u32InTimes > 0xFF &&
+         u32Shift < 5) {
+    pstAeSnsGainInfo->u32GainDb =
+        (pstAeSnsGainInfo->u32GainDb << 1) | 1;
+
+    u32Shift++;
+    u32InTimes >>= 1;
+  }
+
+  pstAeSnsGainInfo->u32SnsTimes =
+      u32InTimes << u32Shift;
+
+  pstAeSnsGainInfo->u32GainDb =
+      u32InTimes +
+      (pstAeSnsGainInfo->u32GainDb << 8);
+
   return;
 }
 
@@ -203,23 +226,61 @@ static XM_VOID cmos_inttime_update(XM_U32 u32IntTime) {
 
   su32IntTime = u32IntTime;
   gu32ShutNow = u32IntTime;
+  u32IntTimeX2 = u32IntTime << 1;
 
-  u32IntTimeX2 = u32IntTime * 2;
+  sensor_write_register(
+      0x3E02,
+      (u32IntTime << 5) & 0xE0);
 
-  sensor_write_register(0x3E02, (u32IntTime << 5) & 0xE0);
-  sensor_write_register(0x3E01, (u32IntTimeX2 >> 4) & 0xFF);
-  sensor_write_register(0x3E00, (u32IntTimeX2 >> 12) & 0x0F);
+  sensor_write_register(
+      0x3E01,
+      (u32IntTimeX2 >> 4) & 0xFF);
+
+  sensor_write_register(
+      0x3E00,
+      (u32IntTimeX2 >> 12) & 0x0F);
 
   return;
 }
 
-static XM_VOID cmos_gains_update(XM_U32 u32Again,
-                                 XM_U32 u32Dgain) {
+static XM_VOID cmos_gains_update(
+    XM_U32 u32Again,
+    XM_U32 u32Dgain) {
+  static XM_U32 su32Again = 0xFFFFFFFF;
+  static XM_U32 su32Dgain = 0xFFFFFFFF;
+
   /*
-   * Temporarily disabled.
-   * The SC5332 analog- and digital-gain calculation callbacks
-   * still need to be reconstructed from the original firmware.
+   * The original firmware reads 0x3911 before checking whether
+   * the requested gain values changed.
+   *
+   * The returned value is stored for use elsewhere, but it does
+   * not participate in the register encoding below.
    */
+  (XM_VOID)sensor_read_register(0x3911);
+
+  if (su32Again == u32Again &&
+      su32Dgain == u32Dgain)
+    return;
+
+  su32Again = u32Again;
+  su32Dgain = u32Dgain;
+
+  sensor_write_register(
+      0x3E08,
+      ((((u32Again >> 8) & 0xFF) << 2) | 0x03));
+
+  sensor_write_register(
+      0x3E09,
+      u32Again & 0xFF);
+
+  sensor_write_register(
+      0x3E06,
+      (u32Dgain >> 8) & 0xFF);
+
+  sensor_write_register(
+      0x3E07,
+      u32Dgain & 0xFF);
+
   return;
 }
 
