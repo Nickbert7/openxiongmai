@@ -174,7 +174,22 @@ jobs:
           echo "=== Majestic relevant strings with offsets ==="
           strings -t x "$BIN" \
             | grep -Ei 'mipimode|mipioutclk|MIPI_SET_DEV_ATTR|XM_MPI_MIPI' || true
+          echo
+          echo "=== Data around 0x0016c554 ==="
+          ${CROSS_COMPILE}objdump -s \
+            --start-address=0x0016c520 \
+            --stop-address=0x0016c5c0 \
+            "$BIN"
 
+          echo
+          echo "=== Section containing 0x0016c554 ==="
+          ${CROSS_COMPILE}readelf -S "$BIN"
+          echo
+          echo "=== Raw 32-bit words around MIPI table ==="
+          ${CROSS_COMPILE}objdump -s \
+            --start-address=0x0016c540 \
+            --stop-address=0x0016c5a0 \
+            "$BIN"
       - name: Verify outputs exist
         run: |
           for f in \
