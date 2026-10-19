@@ -85,7 +85,58 @@ jobs:
               echo "$result"
             fi
           done
-          
+          echo
+          echo "=== Search Majestic if present ==="
+          find . -type f -name 'majestic' -print0 |
+          while IFS= read -r -d '' f; do
+            echo "=== $f ==="
+            ${CROSS_COMPILE}readelf -Ws "$f" 2>/dev/null \
+              | grep -E 'XM_MPI_MIPI_(Set|Get)DevAttr' || true
+          done
+          echo
+          echo "=== All undefined XM_MPI symbols in libispapp ==="
+          ${CROSS_COMPILE}nm -D "$LIB" \
+            | awk '$1 == "U" && $2 ~ /^XM_MPI_/ {print $2}' \
+            | sort -u
+
+          echo
+          echo "=== MIPI references in libispapp ==="
+          ${CROSS_COMPILE}readelf -Ws "$LIB" \
+            | grep -Ei 'MIPI|COMBO' || true
+            
+      - name: Inspect Majestic MIPI implementation
+        shell: bash
+        run: |
+          BIN="tools/reference/majestic"
+
+          if [ ! -f "$BIN" ]; then
+            echo "Majestic reference binary not present, skipping"
+            exit 0
+          fi
+
+          echo "=== Majestic ELF ==="
+          ${CROSS_COMPILE}readelf -h "$BIN" | grep -E 'Class:|Machine:|Type:'
+
+          echo
+          echo "=== Majestic dynamic MIPI symbols ==="
+          ${CROSS_COMPILE}nm -D "$BIN" 2>/dev/null \
+            | grep -Ei 'MIPI|COMBO' || true
+
+          echo
+          echo "=== Majestic MIPI symbol table ==="
+          ${CROSS_COMPILE}readelf -Ws "$BIN" \
+            | grep -Ei 'XM_MPI_MIPI|Mipi' || true
+
+          echo
+          echo "=== Majestic sections ==="
+          ${CROSS_COMPILE}readelf -S "$BIN" \
+            | grep -E '\.text|\.dynsym|\.symtab' || true
+
+          echo
+          echo "=== Majestic MIPI strings ==="
+          strings "$BIN" \
+            | grep -Ei 'XM_MPI_MIPI|Mipi_check|MIPI' || true
+            
       - name: Verify outputs exist
         run: |
           for f in \
