@@ -228,18 +228,16 @@ static XM_VOID cmos_fps_set(XM_U8 u8Fps,
                             AE_SENSOR_DEFAULT_S *pstAeSnsDft) {
   XM_U32 u32TotalSizeV;
 
-  if (gstRlstType == P1080_ ||
-      gstRlstType == P4M_) {
-    u8Fps = 20;
-    u32TotalSizeV = 0x07BC;
+  /*
+   * SC5332 5M 15 fps mode.
+   * Verified against the original firmware and live sensor:
+   *
+   *   VTS = 0x0A50 = 2640
+   */
+  u8Fps = 15;
+  u32TotalSizeV = 0x0A50;
 
-    DEBUG("cmos_fps_set SC5332 5M 20fps\n");
-  } else {
-    u8Fps = 15;
-    u32TotalSizeV = 0x0A50;
-
-    DEBUG("cmos_fps_set SC5332 5M 15fps\n");
-  }
+  DEBUG("cmos_fps_set SC5332 5M 15fps\n");
 
   if (pstAeSnsDft != XM_NULL) {
     pstAeSnsDft->u32FullLinesStd = u32TotalSizeV;
@@ -260,6 +258,7 @@ static XM_VOID cmos_fps_set(XM_U8 u8Fps,
 
   return;
 }
+
 
 
 /****************************************************************************
