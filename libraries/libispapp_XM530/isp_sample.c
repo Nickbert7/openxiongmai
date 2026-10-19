@@ -2312,7 +2312,7 @@ static XM_S32 GetIspWndRect(XM_U8 u8Fps, RECT_S *pstRect) {
     }
     break;
   case SENSOR_CHIP_SC5332:
-    if (gstProductInfo.u8RsltType == 4) {
+   if (gstProductInfo.u8RsltType == P4M_) {
       pstRect->s32X = 1;
       pstRect->s32Y = 0;
       pstRect->u32Height = 1448;
@@ -2510,26 +2510,26 @@ static XM_S32 ispSampleMain() {
   stPubAttr.stVFAttr.opType = OP_TYPE_AUTO;
   s32Ret = ExtCft_GetIspWndRect(stPubAttr.u8FrameRate, &(stPubAttr.stWndRect));
 
-  printf("DEBUG ExtCft_GetIspWndRect:\n");
-  printf("  ret    = %d\n", s32Ret);
-  printf("  sensor = %u\n", gstProductInfo.u32SensorType);
-  printf("  rslt   = %u\n", gstProductInfo.u8RsltType);
-  printf("  fps    = %u\n", stPubAttr.u8FrameRate);
-  printf("  X      = %d\n", stPubAttr.stWndRect.s32X);
-  printf("  Y      = %d\n", stPubAttr.stWndRect.s32Y);
-  printf("  Width  = %u\n", stPubAttr.stWndRect.u32Width);
-  printf("  Height = %u\n", stPubAttr.stWndRect.u32Height);
+  DEBUG("SC5332 WND ext: ret=%d sensor=%u rslt=%u fps=%u X=%d Y=%d W=%u H=%u\n",
+        s32Ret,
+        gstProductInfo.u32SensorType,
+        gstProductInfo.u8RsltType,
+        stPubAttr.u8FrameRate,
+        stPubAttr.stWndRect.s32X,
+        stPubAttr.stWndRect.s32Y,
+        stPubAttr.stWndRect.u32Width,
+        stPubAttr.stWndRect.u32Height);
 
-  #if (defined SOC_SYSTEM) || (defined SOC_ALIOS)
-    if (s32Ret != XM_SUCCESS) {
-      GetIspWndRect(stPubAttr.u8FrameRate, &(stPubAttr.stWndRect));
+#if (defined SOC_SYSTEM) || (defined SOC_ALIOS)
+  if (s32Ret != XM_SUCCESS) {
+    GetIspWndRect(stPubAttr.u8FrameRate, &(stPubAttr.stWndRect));
+  }
 
-      printf("DEBUG GetIspWndRect fallback:\n");
-      printf("  X      = %d\n", stPubAttr.stWndRect.s32X);
-      printf("  Y      = %d\n", stPubAttr.stWndRect.s32Y);
-      printf("  Width  = %u\n", stPubAttr.stWndRect.u32Width);
-      printf("  Height = %u\n", stPubAttr.stWndRect.u32Height);
-    }
+  DEBUG("SC5332 WND final: X=%d Y=%d W=%u H=%u\n",
+        stPubAttr.stWndRect.s32X,
+        stPubAttr.stWndRect.s32Y,
+        stPubAttr.stWndRect.u32Width,
+        stPubAttr.stWndRect.u32Height);
 
   if (gstParamIn.u8Mode) {
     VI_CHN_ATTR_S stAttr;
@@ -2606,33 +2606,55 @@ static XM_S32 ispSampleMain() {
     ERR("sensor_register_callback failed!\n");
     return XM_FAILURE;
   }
- s32Ret = XM_MPI_ISP_SetPubAttr(gIspDevApp, &stPubAttr);
+
+  s32Ret = XM_MPI_ISP_SetPubAttr(gIspDevApp, &stPubAttr);
   if (s32Ret != XM_SUCCESS) {
     ERR("XM_MPI_ISP_SetPubAttr failed!\n");
     return XM_FAILURE;
   }
 
-  printf("DEBUG before VI_WinSet:\n");
-  printf("  H_BEGIN = 0x%08X\n", Read_IspReg(VI_CUT_BEGIN_H));
-  printf("  H_END   = 0x%08X\n", Read_IspReg(VI_CUT_END_H));
-  printf("  V_BEGIN = 0x%08X\n", Read_IspReg(VI_CUT_BEGIN_V));
-  printf("  V_END   = 0x%08X\n", Read_IspReg(VI_CUT_END_V));
+  DEBUG("SC5332 CUT before VI_WinSet: H=%08X..%08X V=%08X..%08X\n",
+        (unsigned int)Read_IspReg(VI_CUT_BEGIN_H),
+        (unsigned int)Read_IspReg(VI_CUT_END_H),
+        (unsigned int)Read_IspReg(VI_CUT_BEGIN_V),
+        (unsigned int)Read_IspReg(VI_CUT_END_V));
 
   VI_WinSet(1, 0, 0, 0, 0);
 
-  printf("DEBUG after VI_WinSet:\n");
-  printf("  H_BEGIN = 0x%08X\n", Read_IspReg(VI_CUT_BEGIN_H));
-  printf("  H_END   = 0x%08X\n", Read_IspReg(VI_CUT_END_H));
-  printf("  V_BEGIN = 0x%08X\n", Read_IspReg(VI_CUT_BEGIN_V));
-  printf("  V_END   = 0x%08X\n", Read_IspReg(VI_CUT_END_V));
+  DEBUG("SC5332 CUT after VI_WinSet: H=%08X..%08X V=%08X..%08X\n",
+        (unsigned int)Read_IspReg(VI_CUT_BEGIN_H),
+        (unsigned int)Read_IspReg(VI_CUT_END_H),
+        (unsigned int)Read_IspReg(VI_CUT_BEGIN_V),
+        (unsigned int)Read_IspReg(VI_CUT_END_V));
 
   s32Ret = XM_MPI_ISP_Init(gIspDevApp);
   if (s32Ret != XM_SUCCESS) {
     ERR("XM_MPI_ISP_Init failed!\n");
     return XM_FAILURE;
   }
+
+  DEBUG("SC5332 CUT after ISP_Init: H=%08X..%08X V=%08X..%08X\n",
+        (unsigned int)Read_IspReg(VI_CUT_BEGIN_H),
+        (unsigned int)Read_IspReg(VI_CUT_END_H),
+        (unsigned int)Read_IspReg(VI_CUT_BEGIN_V),
+        (unsigned int)Read_IspReg(VI_CUT_END_V));
+
   ExtCfg_IspDataInit(gstProductInfo.u8Encoder, gstProductInfo.u8StdType - 1);
+
+  DEBUG("SC5332 CUT after IspDataInit: H=%08X..%08X V=%08X..%08X\n",
+        (unsigned int)Read_IspReg(VI_CUT_BEGIN_H),
+        (unsigned int)Read_IspReg(VI_CUT_END_H),
+        (unsigned int)Read_IspReg(VI_CUT_BEGIN_V),
+        (unsigned int)Read_IspReg(VI_CUT_END_V));
+
   ExtCfg_PN_IspSet(gstProductInfo.u8Encoder, gstProductInfo.u8StdType - 1);
+
+  DEBUG("SC5332 CUT after PN_IspSet: H=%08X..%08X V=%08X..%08X\n",
+        (unsigned int)Read_IspReg(VI_CUT_BEGIN_H),
+        (unsigned int)Read_IspReg(VI_CUT_END_H),
+        (unsigned int)Read_IspReg(VI_CUT_BEGIN_V),
+        (unsigned int)Read_IspReg(VI_CUT_END_V));
+
 #ifdef SOC_NONE
   XM_MPI_ISP_Run(gIspDevApp);
 #endif
