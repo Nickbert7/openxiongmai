@@ -186,6 +186,14 @@ XM_S32 SysGetProductInfo(XM_PRODUCT_INFO *pstProductInfo) {
   /* majestic does not know the SC2239 */
   if (pstProductInfo->u32SensorType == SENSOR_CHIP_SC2239)
     pstProductInfo->u32SensorType = SENSOR_CHIP_SC2335;
+    /*
+   * TEST: expose SC5332 as known 5MP SC5235 to majestic.
+   * Internal sensor remains SC5332.
+   */
+  if (pstProductInfo->u32SensorType == SENSOR_CHIP_SC5332) {
+    DEBUG("SC5332: reporting SC5235 to majestic\n");
+    pstProductInfo->u32SensorType = SENSOR_CHIP_SC5235;
+  }
   return XM_SUCCESS;
 }
 
@@ -205,6 +213,11 @@ XM_S32 SysSetProductInfo(XM_PRODUCT_INFO *pstProductInfo) {
   if (u32SensorType == SENSOR_CHIP_SC2239 &&
       gstProductInfo.u32SensorType == SENSOR_CHIP_SC2335)
     gstProductInfo.u32SensorType = SENSOR_CHIP_SC2239;
+ if (u32SensorType == SENSOR_CHIP_SC5332 &&
+    gstProductInfo.u32SensorType == SENSOR_CHIP_SC5235) {
+  DEBUG("SC5332: restoring sensor type after majestic SC5235 mapping\n");
+  gstProductInfo.u32SensorType = SENSOR_CHIP_SC5332;
+  }
   return XM_SUCCESS;
 }
 
