@@ -136,6 +136,20 @@ jobs:
           echo "=== Majestic MIPI strings ==="
           strings "$BIN" \
             | grep -Ei 'XM_MPI_MIPI|Mipi_check|MIPI' || true
+                    echo
+          echo "=== Exact MIPI symbol addresses ==="
+          ${CROSS_COMPILE}readelf -Ws "$BIN" \
+            | grep -E 'XM_MPI_MIPI_(SetDevAttr|GetDevAttr|RefreshFV)' || true
+
+          echo
+          echo "=== Disassembly around XM_MPI_MIPI_SetDevAttr ==="
+          ${CROSS_COMPILE}objdump -d "$BIN" \
+            | grep -A 120 -B 10 '<XM_MPI_MIPI_SetDevAttr>' || true
+
+          echo
+          echo "=== Disassembly around XM_MPI_MIPI_GetDevAttr ==="
+          ${CROSS_COMPILE}objdump -d "$BIN" \
+            | grep -A 80 -B 10 '<XM_MPI_MIPI_GetDevAttr>' || true
             
       - name: Verify outputs exist
         run: |
